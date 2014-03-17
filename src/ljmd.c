@@ -8,9 +8,20 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <math.h>
+#include <sys/time.h>
 
 #if defined(_OPENMP)
 #include <omp.h>
+/*helper function, get current time in seconds since epoch */
+static double wallclock(void)
+{
+struct timewall t;
+
+gettimeofday(&t,0);
+return((double) t_tv.sec)+ 1.0e-6*((double) t_tv.usec);
+}
+
+
 #endif
 
 /* generic file- or pathname buffer length */
@@ -452,6 +463,12 @@ int main(int argc, char **argv)
     char restfile[BLEN], trajfile[BLEN], ergfile[BLEN], line[BLEN];
     FILE *fp,*traj,*erg;
     mdsys_t sys;
+    
+    double t_start;
+    
+    t_start=wallclock();
+
+
 
 #if defined(_OPENMP)
 #pragma omp parallel
@@ -523,9 +540,12 @@ int main(int argc, char **argv)
     erg=fopen(ergfile,"w");
     traj=fopen(trajfile,"w");
 
+    printf("Startup time: %10.3fs\n", wallclock()-t_start);
     printf("Starting simulation with %d atoms for %d steps.\n",sys.natoms, sys.nsteps);
     printf("     NFI            TEMP            EKIN                 EPOT              ETOT\n");
     output(&sys, erg, traj);
+    /*reset timer */
+    t_start=wallclock();
 
     /**************************************************/
     /* main MD loop */
@@ -547,6 +567,7 @@ int main(int argc, char **argv)
 
     /* clean up: close files, free memory */
     printf("Simulation Done.\n");
+    printf("Simulation Done. %10.3fs\n", wallclock()-t_start);
     fclose(erg);
     fclose(traj);
     free(sys.pos);
